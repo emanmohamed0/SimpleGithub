@@ -25,7 +25,7 @@ public class DBContoller {
         dbHelper.close();
     }
 
-    public int insert_db(String repo, String username, String desp,String html_url) {
+    public int insert_db(String repo, String username, String desp,String html_url,boolean fork) {
         open();
 
         ContentValues values = new ContentValues();
@@ -33,6 +33,7 @@ public class DBContoller {
         values.put(DBHelper.UserName, username);
         values.put(DBHelper.Desp, desp);
         values.put(DBHelper.Html_Url, html_url);
+        values.put(DBHelper.Fork,fork);
 
 
         int num = (int) database.insert(DBHelper.TABLE_NAME, null, values);
@@ -44,7 +45,7 @@ public class DBContoller {
     public Cursor get_dataselect() {
 
         open();
-        String[] column = { DBHelper.RepoName, DBHelper.UserName, DBHelper.Desp,DBHelper.Html_Url};
+        String[] column = { DBHelper.RepoName, DBHelper.UserName, DBHelper.Desp,DBHelper.Html_Url,DBHelper.Fork};
         Cursor c = database.query(DBHelper.TABLE_NAME, column, null, null, null, null, null, null);
 
         if (c != null) {

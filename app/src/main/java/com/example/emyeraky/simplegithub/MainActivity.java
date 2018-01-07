@@ -122,15 +122,16 @@ public class MainActivity extends AppCompatActivity {
 
             if (cursor.moveToFirst()) {
 
-                dataArray = new Data[30];
+                dataArray = new Data[20];
 
-                for (int i = 0; i < 30; i++) {
+                for (int i = 0; i < 20; i++) {
 
                     dataArray[i] = new Data();
-                    dataArray[i].setUser_Name(cursor.getString(1));
                     dataArray[i].setRepoName(cursor.getString(0));
+                    dataArray[i].setUser_Name(cursor.getString(1));
                     dataArray[i].setDescription(cursor.getString(2));
                     dataArray[i].setHtml_url(cursor.getString(3));
+                    dataArray[i].setFork((cursor.getInt(4))>0);
                     cursor.moveToNext();
                 }
                 rvAdapter = new RVAdapter(dataArray);
@@ -140,6 +141,12 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    protected void onStart() {
+        getData();
+        super.onStart();
     }
 
     // use to tell connection network
@@ -256,7 +263,7 @@ public class MainActivity extends AppCompatActivity {
                     dataArray[i].setFork(datas[i].getFork());
                     dataArray[i].setHtml_url(datas[i].getHtml_url());
 
-                    id = dbContoller.insert_db(datas[i].getRepoName(), datas[i].getUser_Name(), datas[i].getDescription(), datas[i].getHtml_url());
+                    id = dbContoller.insert_db(datas[i].getRepoName(), datas[i].getUser_Name(), datas[i].getDescription(), datas[i].getHtml_url(),datas[i].getFork());
                     if (id > 0) {
 
                     } else

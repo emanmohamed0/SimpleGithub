@@ -11,7 +11,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class DBHelper extends SQLiteOpenHelper {
     //database_declare
     private static final String DATABASE_NAME="Github";
-    private static final int DATABASE_VERSION=3;
+    private static final int DATABASE_VERSION=4;
 
     //tables
     public static final String TABLE_NAME="GitData";
@@ -22,12 +22,11 @@ public class DBHelper extends SQLiteOpenHelper {
     public static final String Desp = "desp" ;
     public static final String UserName = "username" ;
     public static final String Html_Url ="html_url" ;
-
-
+    public static final String Fork ="fork";
     //create TABLE
     String CREATE_TABLE="CREATE TABLE "+TABLE_NAME+
             "("+ID+" INTEGER PRIMARY KEY AUTOINCREMENT,"+
-            RepoName+" TEXT,"+UserName+" ,"+Desp+" TEXT , "+Html_Url+" TEXT)";
+            RepoName+" TEXT,"+UserName+" ,"+Desp+" TEXT , "+Html_Url+" TEXT , "+Fork+" bool)";
 
     public DBHelper(Context context){
         super(context, DATABASE_NAME, null , DATABASE_VERSION);
