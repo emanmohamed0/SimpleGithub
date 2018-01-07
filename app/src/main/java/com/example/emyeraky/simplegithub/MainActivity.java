@@ -15,13 +15,14 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.CardView;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -35,31 +36,31 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
-    AdapterGit adapterGit;
-    ListView lvGit;
     Data[] dataArray;
     SwipeRefreshLayout refreshLayout;
-    CardView cardview;
-    Data objectData;
     static Context context;
     DBContoller dbContoller;
-    int pageroll = 0;
+    int pageroll = 1;
+    private RecyclerView rv;
+    RVAdapter rvAdapter;
     ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        objectData = new Data();
-        cardview = (CardView) findViewById(R.id.cardview);
-        lvGit = (ListView) findViewById(R.id.lvGit);
-        lvGit.setLongClickable(true);
+
+        progressBar = (ProgressBar) findViewById(R.id.progressbar);
+        rv = (RecyclerView) findViewById(R.id.lvGit);
+        LinearLayoutManager llm = new LinearLayoutManager(this);
+        rv.setLayoutManager(llm);
+        rv.setHasFixedSize(true);
         refreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipeContainer);
         refreshLayout.setColorSchemeResources(R.color.green, R.color.red, R.color.orange);
         context = getBaseContext();
         dbContoller = new DBContoller(context);
+        /////////////////////////////////////
 
-        progressBar = (ProgressBar) findViewById(R.id.progressbar);
         refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
@@ -68,58 +69,51 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         refreshLayout.setRefreshing(false);
-                        if (isNetworkConnected()) {
-                            pageroll = pageroll + 1;
-                            FetchGithub fetchGithub = new FetchGithub();
-                            fetchGithub.execute("page=" + pageroll + "&", "per_page=10");
-                        } else {
-                            selectDataOffline();
-                        }
+                        pageroll = pageroll + 1;
+                        getData();
+
                     }
                 }, 3000);
             }
         });
 
 
-        lvGit.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        getData();
+
+        rv.addOnScrollListener(new RecyclerViewScrollListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> arg0, View arg1, final int position, long id) {
-                Dialog(position);
-                return true;
+            public void onScrollUp() {
+
+            }
+
+            @Override
+            public void onScrollDown() {
+//                pageroll = pageroll + 1;
+//                getData();
+            }
+
+            @Override
+            public void onLoadMore() {
+                pageroll = pageroll + 1;
+                if (isNetworkConnected()) {
+                    FetchGithub fetchGithub = new FetchGithub();
+                    fetchGithub.execute("page=" + pageroll + "&", "per_page=30");
+                } else {
+                    selectDataOffline();
+                }
             }
         });
 
+
+    }
+
+    public void getData() {
         if (isNetworkConnected()) {
+            FetchGithub fetchGithub = new FetchGithub();
+            fetchGithub.execute("page=" + pageroll + "&", "per_page=10");
         } else {
             selectDataOffline();
         }
-        lvGit.setOnScrollListener(new AbsListView.OnScrollListener() {
-            @Override
-            public void onScrollStateChanged(AbsListView absListView, int i) {
-            }
-
-            @Override
-            public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
-                                 int totalItemCount) {
-                if (totalItemCount - visibleItemCount == firstVisibleItem) {
-                    View v = lvGit.getChildAt(totalItemCount - 1);
-                    int offset = (v == null) ? 0 : v.getTop();
-                    if (offset == 0) {
-                        if (isNetworkConnected()) {
-                            pageroll = pageroll + 1;
-                            FetchGithub fetchGithub = new FetchGithub();
-                            fetchGithub.execute("page=" + pageroll + "&", "per_page=10");
-
-                        } else {
-                            selectDataOffline();
-                        }
-
-                    }
-                }
-            }
-
-
-        });
     }
 
     public void selectDataOffline() {
@@ -128,9 +122,9 @@ public class MainActivity extends AppCompatActivity {
 
             if (cursor.moveToFirst()) {
 
-                dataArray = new Data[cursor.getCount()];
+                dataArray = new Data[30];
 
-                for (int i = 0; i < cursor.getCount(); i++) {
+                for (int i = 0; i < 30; i++) {
 
                     dataArray[i] = new Data();
                     dataArray[i].setUser_Name(cursor.getString(1));
@@ -139,11 +133,12 @@ public class MainActivity extends AppCompatActivity {
                     dataArray[i].setHtml_url(cursor.getString(3));
                     cursor.moveToNext();
                 }
-                adapterGit = new AdapterGit(getBaseContext(), dataArray);
-                lvGit.setAdapter(adapterGit);
+                rvAdapter = new RVAdapter(dataArray);
+                rv.setAdapter(rvAdapter);
+
             }
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -155,26 +150,6 @@ public class MainActivity extends AppCompatActivity {
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
-    //Dialog show
-    public void Dialog(final int position) {
-        Log.v("long clicked", "position: " + position);
-        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-        alertDialog.setTitle("If go to Repository");
-        alertDialog.setMessage(dataArray[position].getHtml_url());
-        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        String url = dataArray[position].getHtml_url();
-                        Intent i = new Intent(Intent.ACTION_VIEW);
-                        i.setData(Uri.parse(url));
-                        startActivity(i);
-
-                        dialog.dismiss();
-                    }
-                });
-
-        alertDialog.show();
-    }
 
     //get data from Json
     private Data[] getGitDataFromJson(String gitJsonStr) throws JSONException {
@@ -270,6 +245,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Data[] datas) {
+            int id;
             dataArray = new Data[datas.length];
             if (datas != null) {
                 for (int i = 0; i < datas.length; i++) {
@@ -280,12 +256,15 @@ public class MainActivity extends AppCompatActivity {
                     dataArray[i].setFork(datas[i].getFork());
                     dataArray[i].setHtml_url(datas[i].getHtml_url());
 
-                    dbContoller.insert_db(datas[i].getRepoName(), datas[i].getUser_Name(), datas[i].getDescription(), datas[i].getHtml_url());
+                    id = dbContoller.insert_db(datas[i].getRepoName(), datas[i].getUser_Name(), datas[i].getDescription(), datas[i].getHtml_url());
+                    if (id > 0) {
+
+                    } else
+                        Toast.makeText(MainActivity.this, "Not insert", Toast.LENGTH_SHORT).show();
 
                 }
-                adapterGit = new AdapterGit(getBaseContext(), dataArray);
-                lvGit.setAdapter(adapterGit);
-
+                rvAdapter = new RVAdapter(dataArray);
+                rv.setAdapter(rvAdapter);
             }
 
 
